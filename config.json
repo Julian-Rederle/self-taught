@@ -1,0 +1,13 @@
+{
+  "tests": {
+    "folder_list": [
+      "/home/master/OneDriveUni/6. Semester/WebSec/self_taught/book_quiz",
+      "/home/master/OneDriveUni/6. Semester/WebSec/self_taught/slide_quiz/"
+    ]
+  },
+  "general": {
+    "solution_file_suffix": "_solution",
+    "solution_folder_suffix": "_solutions",
+    "img_program" : "gwenview"
+  }
+}
