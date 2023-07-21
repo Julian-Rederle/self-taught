@@ -3,6 +3,7 @@ import json
 import random
 import subprocess
 from PIL import Image
+from threading import Thread, Event
 
 random.seed()
 
@@ -76,27 +77,27 @@ def load_tasks(config):
 
 def show_file(file):
     img_program = config[GENERAL_CONFIG_KEY][IMG_PROGRAM_KEY]
-    #file = file.replace(' ', '\ ')
+    # file = file.replace(' ', '\ ')
 
-
-    #print(img_program, file)
-    #proc = subprocess.Popen([img_program, file], shell=True)
-    proc = Image.new(file)
-    proc.show()
+    # print(img_program, file)
+    # TODO: Fix command injection vulnerability
+    proc = subprocess.Popen(f'{img_program} "{file}"', shell=True)
 
     return proc
+
+
+def close_file(process):
+    process.kill()
 
 
 def switch_task(index=None, task_process=None, solution_process=None):
     # close current tasks
     if task_process:
-        #task_process.kill()
-        task_process.close()
+        close_file(task_process)
 
     # close current solutions
     if solution_process:
-        #solution_process.kill()
-        solution_process.close()
+        close_file(solution_process)
 
     if index != None:
         interactive_menu(index)
@@ -135,32 +136,35 @@ def interactive_menu(index=0):
     # print("Task" + task_file)
     task_process = show_file(task_file)
 
-    command = input("Command: ")
+    while True:
+        command = input("Command: ")
 
-    if command in ["e", "exit"]:
-        print("Bye!")
-        switch_task(task_process=task_process, solution_process=solution_process) # exits without index
-    if command in ["n", "next"]:
-        switch_task(index=index + 1, task_process=task_process, solution_process=solution_process)
-    if command in ["p", "previous"]:
-        if index - 1 < 0:
-            print("No previous task!")
+        if command in ["e", "exit"]:
+            print("Bye!")
+            index = None
+            break
+        if command in ["n", "next"]:
+            index += 1
+            break
+        if command in ["p", "previous"]:
+            if index - 1 < 0:
+                print("No previous task!")
+            else:
+                index -= 1
+                break
 
-        switch_task(index=index - 1, task_process=task_process, solution_process=solution_process)
+        if command in ["s", "solution"]:
+            solution_file = history[index][1]
+            # close current solution
+            if solution_process:
+                close_file(solution_process)
 
-    if command in ["s", "solution"]:
-        solution_file = history[index][1]
-        # close current solution
-        if solution_process:
-            #solution_process.kill()
-            solution_process.close()
+            # open new solution
+            solution_process = show_file(solution_file)
+            # print("Solution: " + solution_file)
 
-        # open new solution
-        solution_process = show_file(solution_file)
-        # print("Solution: " + solution_file)
-
-    # chase with no matching command
-    print("No matching command!")
+        # chase with no matching command
+        print("No matching command!")
     switch_task(index=index, task_process=task_process, solution_process=solution_process)
 
 
