@@ -2,8 +2,7 @@ import os
 import json
 import random
 import subprocess
-from PIL import Image
-from threading import Thread, Event
+from termcolor import colored, cprint
 
 random.seed()
 
@@ -29,7 +28,8 @@ def read_config():
     config_file = os.path.join(ROOT_DIR, CONFIG_NAME)
 
     if not os.path.isfile(config_file):
-        print(f"Config file missing, please add {CONFIG_NAME} to {ROOT_DIR}!")
+        #print(f"Config file missing, please add {CONFIG_NAME} to {ROOT_DIR}!")
+        cprint(f"Config file missing, please add {CONFIG_NAME} to {ROOT_DIR}!", "red")
         exit()
 
     with open(config_file, "r") as f:
@@ -58,8 +58,10 @@ def load_tasks(config):
 
             # check if solution folder exists
             if not os.path.isdir(solution_dir):
-                print(f"Solution folder for {task_dir} missing!")
-                print(f"Please add {solution_dir}!")
+                #print(f"Solution folder for {task_dir} missing!")
+                #print(f"Please add {solution_dir}!")
+                cprint(f"Solution folder for {task_dir} missing!", "red")
+                cprint(f"Please add {solution_dir}!", "red")
                 exit()
 
             task_location = os.path.join(task_dir, task_name)
@@ -67,12 +69,15 @@ def load_tasks(config):
             solution_location = os.path.join(solution_dir, task_split[0] + file_suffix + task_split[1])
 
             if not os.path.isfile(solution_location):
-                print(f"Solution for {task_name} missing!")
-                print(f"Please add {solution_location}!")
+                #print(f"Solution for {task_name} missing!")
+                #print(f"Please add {solution_location}!")
+                cprint(f"Solution for {task_name} missing!", "red")
+                cprint(f"Please add {solution_location}!", "red")
                 exit()
 
             tasks.append((task_location, solution_location))
-        print(f"{task_count} tasks found in {os.path.basename(task_dir)}")
+        #print(f"{task_count} tasks found in {os.path.basename(task_dir)}")
+        cprint(f"{task_count} tasks found in {os.path.basename(task_dir)}", "green")
 
 
 def show_file(file):
@@ -81,7 +86,8 @@ def show_file(file):
 
     # print(img_program, file)
     # TODO: Fix command injection vulnerability
-    proc = subprocess.Popen(f'{img_program} "{file}"', shell=True)
+    DEVNULL = ""
+    proc = subprocess.Popen(f'{img_program} "{file}"', shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     return proc
 
@@ -131,13 +137,17 @@ def interactive_menu(index=0):
         tasks.remove(new_task)
 
     # display task
-    print(f"Question number {index + 1}")
+    total_task_count = len(tasks) + len(done_tasks)
+    progress = int((len(done_tasks) / total_task_count) * 100)
+    progress = " " * (3-len(str(progress))) + str(progress)
+    current_task = " " * (len(str(total_task_count)) - len(str(index + 1))) + str(index + 1)
+    cprint(f"Question number {current_task} of {total_task_count} | {progress}% done", "black", "on_white")
     task_file = history[index][0]
     # print("Task" + task_file)
     task_process = show_file(task_file)
 
     while True:
-        command = input("Command: ")
+        command = input(colored("Command: ", "blue", attrs=["bold"]))
 
         if command in ["e", "exit"]:
             print("Bye!")
