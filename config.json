@@ -7,6 +7,7 @@
     ]
   },
   "general": {
+    "progress_file" : "progress.json",
     "solution_file_suffix": "_solution",
     "solution_folder_suffix": "_solutions",
     "img_program" : "gwenview"

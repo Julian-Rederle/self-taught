@@ -16,6 +16,7 @@ TASK_DIRS_KEY = "folder_list"
 FILE_SUFFIX_KEY = "solution_file_suffix"
 FOLDER_SUFFIX_KEY = "solution_folder_suffix"
 IMG_PROGRAM_KEY = "img_program"
+PROGRESS_FILE_KEY = "progress_file"
 
 config = []
 
@@ -23,12 +24,14 @@ tasks = []
 done_tasks = []
 history = []
 
+progress_file = ""
+
 
 def read_config():
     config_file = os.path.join(ROOT_DIR, CONFIG_NAME)
 
     if not os.path.isfile(config_file):
-        #print(f"Config file missing, please add {CONFIG_NAME} to {ROOT_DIR}!")
+        # print(f"Config file missing, please add {CONFIG_NAME} to {ROOT_DIR}!")
         cprint(f"Config file missing, please add {CONFIG_NAME} to {ROOT_DIR}!", "red")
         exit()
 
@@ -58,8 +61,8 @@ def load_tasks(config):
 
             # check if solution folder exists
             if not os.path.isdir(solution_dir):
-                #print(f"Solution folder for {task_dir} missing!")
-                #print(f"Please add {solution_dir}!")
+                # print(f"Solution folder for {task_dir} missing!")
+                # print(f"Please add {solution_dir}!")
                 cprint(f"Solution folder for {task_dir} missing!", "red")
                 cprint(f"Please add {solution_dir}!", "red")
                 exit()
@@ -69,15 +72,54 @@ def load_tasks(config):
             solution_location = os.path.join(solution_dir, task_split[0] + file_suffix + task_split[1])
 
             if not os.path.isfile(solution_location):
-                #print(f"Solution for {task_name} missing!")
-                #print(f"Please add {solution_location}!")
+                # print(f"Solution for {task_name} missing!")
+                # print(f"Please add {solution_location}!")
                 cprint(f"Solution for {task_name} missing!", "red")
                 cprint(f"Please add {solution_location}!", "red")
                 exit()
 
             tasks.append((task_location, solution_location))
-        #print(f"{task_count} tasks found in {os.path.basename(task_dir)}")
+        # print(f"{task_count} tasks found in {os.path.basename(task_dir)}")
         cprint(f"{task_count} tasks found in {os.path.basename(task_dir)}", "green")
+
+
+def load_progress(p_file):
+    global tasks
+    global done_tasks
+    global history
+
+    with open(p_file, "r") as f:
+        progress = json.load(f)
+
+    index = progress["index"]
+    tasks = progress["tasks"]
+    done_tasks = progress["done_tasks"]
+    history = progress["history"]
+
+    cprint(f"Loaded Progress successfully!", "green")
+    cprint(f"{len(tasks)} Tasks to do", "green")
+    cprint(f"{len(done_tasks)} Tasks done", "green")
+    cprint(f"{len(history)} entries in history", "green")
+    cprint(f"Index is {index}", "green")
+
+    return index
+
+
+def save_progress(index):
+    global tasks
+    global done_tasks
+    global progress_file
+    global history
+
+    progress = {
+        "index": index,
+        "tasks": tasks,
+        "done_tasks": done_tasks,
+        "history": history
+    }
+
+    with open(progress_file, "w") as f:
+        json.dump(progress, f, indent=1)
 
 
 def show_file(file):
@@ -117,6 +159,7 @@ def interactive_menu(index=0):
     n -> next
     p -> previous
     s -> show solution
+    c -> jump to current
     """
     global tasks
     global history
@@ -136,10 +179,13 @@ def interactive_menu(index=0):
         done_tasks.append(new_task)
         tasks.remove(new_task)
 
+    # save progress
+    save_progress(index)
+
     # display task
     total_task_count = len(tasks) + len(done_tasks)
     progress = int((len(done_tasks) / total_task_count) * 100)
-    progress = " " * (3-len(str(progress))) + str(progress)
+    progress = " " * (3 - len(str(progress))) + str(progress)
     current_task = " " * (len(str(total_task_count)) - len(str(index + 1))) + str(index + 1)
     cprint(f"Question number {current_task} of {total_task_count} | {progress}% done", "black", "on_white")
     task_file = history[index][0]
@@ -162,6 +208,9 @@ def interactive_menu(index=0):
             else:
                 index -= 1
                 break
+        if command in ["c", "current"]:
+            index = len(history) - 1
+            break
 
         if command in ["s", "solution"]:
             solution_file = history[index][1]
@@ -180,12 +229,21 @@ def interactive_menu(index=0):
 
 def main():
     global config
+    global progress_file
+
     config = read_config()
-    load_tasks(config)
+    progress_file = config[GENERAL_CONFIG_KEY][PROGRESS_FILE_KEY]
+
+    index = 0
+
+    if os.path.isfile(progress_file):
+        index = load_progress(progress_file)
+    else:
+        load_tasks(config)
 
     print()
     print("Control handed over to user now:")
-    interactive_menu()
+    interactive_menu(index)
 
 
 if __name__ == "__main__":
