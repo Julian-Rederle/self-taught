@@ -3,6 +3,7 @@ import json
 import random
 import subprocess
 from termcolor import colored, cprint
+import keyboard
 
 random.seed()
 
@@ -128,7 +129,6 @@ def show_file(file):
 
     # print(img_program, file)
     # TODO: Fix command injection vulnerability
-    DEVNULL = ""
     proc = subprocess.Popen(f'{img_program} "{file}"', shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
     return proc
@@ -138,7 +138,7 @@ def close_file(process):
     process.kill()
 
 
-def switch_task(index=None, task_process=None, solution_process=None):
+def switch_task(index=None, task_process=None, solution_process=None, keyboard_mode=False):
     # close current tasks
     if task_process:
         close_file(task_process)
@@ -148,18 +148,19 @@ def switch_task(index=None, task_process=None, solution_process=None):
         close_file(solution_process)
 
     if index != None:
-        interactive_menu(index)
+        interactive_menu(index, keyboard_mode)
     else:
         exit()
 
 
-def interactive_menu(index=0):
+def interactive_menu(index=0, keyboard_mode = False):
     """
     e -> exit
     n -> next
     p -> previous
     s -> show solution
     c -> jump to current
+    k -> keyboard mode
     """
     global tasks
     global history
@@ -193,11 +194,20 @@ def interactive_menu(index=0):
     task_process = show_file(task_file)
 
     while True:
-        command = input(colored("Command: ", "blue", attrs=["bold"]))
+        if keyboard_mode:
+            keyboard.wait("alt gr")
+            keys = keyboard.record("alt gr", trigger_on_release=True)
+            command = list(filter(lambda x: x != "alt gr", [key.name for key in keys]))[0]
+        else:
+            command = input(colored("Command: ", "blue", attrs=["bold"]))
 
         if command in ["e", "exit"]:
-            print("Bye!")
-            index = None
+            if keyboard_mode:
+                keyboard_mode = False
+                print("Exiting keyboard mode!")
+            else:
+                print("Bye!")
+                index = None
             break
         if command in ["n", "next"]:
             index += 1
@@ -212,6 +222,10 @@ def interactive_menu(index=0):
             index = len(history) - 1
             break
 
+        if command in ["k", "keyboard"]:
+            print("Entering keyboard mode!")
+            keyboard_mode = True
+
         if command in ["s", "solution"]:
             solution_file = history[index][1]
             # close current solution
@@ -224,7 +238,7 @@ def interactive_menu(index=0):
 
         # chase with no matching command
         print("No matching command!")
-    switch_task(index=index, task_process=task_process, solution_process=solution_process)
+    switch_task(index=index, task_process=task_process, solution_process=solution_process, keyboard_mode=keyboard_mode)
 
 
 def main():
